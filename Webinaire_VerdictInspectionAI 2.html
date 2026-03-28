@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webinaire — Verdict Inspection AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --noir: #0A0A0A;
+    --or: #D4A017;
+    --or-vif: #FFD700;
+    --vert: #1B5E20;
+    --vert-clair: #C8E6C9;
+    --gris: #1a1a1a;
+    --gris-mid: #2a2a2a;
+    --texte: #f0e8d0;
+    --rouge: #C62828;
+    --jaune: #F9A825;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--noir);
+    color: var(--texte);
+    font-family: 'DM Sans', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    cursor: default;
+  }
+
+  /* HEADER */
+  .header {
+    position: fixed; top:0; left:0; right:0; z-index:100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 32px;
+    background: rgba(10,10,10,0.95);
+    border-bottom: 1px solid rgba(212,160,23,0.3);
+    backdrop-filter: blur(10px);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--or);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .logo span { color: #fff; }
+  .slide-counter {
+    font-size: 13px; color: rgba(212,160,23,0.7);
+    font-weight: 500; letter-spacing: 1px;
+  }
+  .timer-display {
+    font-size: 13px; color: rgba(255,255,255,0.5);
+    font-family: monospace;
+  }
+
+  /* PROGRESS BAR */
+  .progress-bar {
+    position: fixed; top: 53px; left:0; right:0; z-index:99;
+    height: 3px; background: var(--gris-mid);
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--or), var(--or-vif));
+    transition: width 0.5s ease;
+  }
+
+  /* SLIDE CONTAINER */
+  .slides-wrapper {
+    position: fixed;
+    top: 56px; bottom: 108px; left:0; right:0;
+    display: flex; flex-direction: column;
+  }
+
+  /* SLIDE VISUAL AREA */
+  .slide-visual {
+    flex: 0 0 58%;
+    position: relative;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .slide {
+    position: absolute; inset:0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: translateY(20px);
+  }
+  .slide.active {
+    opacity: 1; pointer-events: all;
+    transform: translateY(0);
+  }
+
+  /* NARRATION PANEL */
+  .narration-panel {
+    flex: 0 0 42%;
+    background: var(--gris);
+    border-top: 2px solid rgba(212,160,23,0.4);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .narration-header {
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid rgba(212,160,23,0.15);
+    background: rgba(212,160,23,0.05);
+  }
+  .mic-icon {
+    width: 28px; height: 28px;
+    background: var(--or);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .narration-label {
+    font-size: 11px; font-weight: 600;
+    color: var(--or); letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .narration-time {
+    margin-left: auto;
+    font-size: 11px; color: rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.05);
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .narration-text {
+    padding: 20px 28px;
+    font-size: 14px; line-height: 1.75;
+    color: rgba(240,232,208,0.9);
+    overflow-y: auto;
+    flex:1;
+  }
+  .narration-text em {
+    color: var(--or); font-style: normal; font-weight: 600;
+  }
+  .narration-text blockquote {
+    border-left: 3px solid var(--or);
+    padding-left: 16px; margin: 12px 0;
+    color: rgba(240,232,208,0.95);
+    font-style: italic;
+  }
+
+  /* NAVIGATION */
+  .nav-bar {
+    position: fixed; bottom:0; left:0; right:0; z-index:100;
+    display: flex; align-items: center; justify-content: center; gap:16px;
+    padding: 14px 32px;
+    background: rgba(10,10,10,0.97);
+    border-top: 1px solid rgba(212,160,23,0.2);
+  }
+  .nav-btn {
+    background: var(--gris-mid); color: var(--texte);
+    border: 1px solid rgba(212,160,23,0.3);
+    padding: 10px 28px; border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px;
+    cursor: pointer; transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .nav-btn:hover { background: var(--or); color: var(--noir); border-color: var(--or); }
+  .nav-btn:disabled { opacity:0.3; cursor:not-allowed; }
+  .nav-btn.primary { background: var(--or); color: var(--noir); border-color: var(--or); }
+  .nav-btn.primary:hover { background: var(--or-vif); }
+  .slide-dots {
+    display: flex; gap: 6px;
+    align-items: center;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(212,160,23,0.25);
+    cursor: pointer; transition: all 0.3s;
+  }
+  .dot.active { background: var(--or); width: 20px; border-radius: 3px; }
+
+  /* ======================== SLIDE DESIGNS ======================== */
+
+  /* SLIDE 1 — TITRE */
+  .slide-titre { 
+    background: radial-gradient(ellipse at 30% 50%, rgba(212,160,23,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(212,160,23,0.06) 0%, transparent 50%),
+                var(--noir);
+    text-align: center;
+    flex-direction: column;
+  }
+  .verdict-badge {
+    display: inline-block;
+    border: 1px solid rgba(212,160,23,0.5);
+    padding: 6px 20px; border-radius: 2px;
+    font-size: 11px; letter-spacing: 4px; color: var(--or);
+    text-transform: uppercase; margin-bottom: 32px;
+  }
+  .titre-main {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 900; line-height: 1.1;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+  .titre-main .accent { color: var(--or); }
+  .titre-sub {
+    font-size: 16px; color: rgba(240,232,208,0.6);
+    font-weight: 300; letter-spacing: 1px;
+    margin-bottom: 40px;
+  }
+  .titre-chips { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .chip {
+    background: rgba(212,160,23,0.1);
+    border: 1px solid rgba(212,160,23,0.3);
+    padding: 6px 16px; border-radius: 20px;
+    font-size: 12px; color: var(--or);
+  }
+
+  /* SLIDE 2 — QUI EST JACQUES */
+  .slide-jacques { 
+    background: var(--noir);
+    flex-direction: column; gap: 0;
+    padding: 0;
+    align-items: stretch;
+  }
+  .jacques-layout {
+    display: grid; grid-template-columns: 1fr 1fr;
+    height: 100%; width: 100%;
+  }
+  .jacques-left {
+    background: linear-gradient(135deg, #1a1200, #0A0A0A);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 48px 40px;
+    border-right: 1px solid rgba(212,160,23,0.2);
+  }
+  .jacques-photo-placeholder {
+    width: 100px; height: 100px; border-radius: 50%;
+    background: linear-gradient(135deg, rgba(212,160,23,0.3), rgba(212,160,23,0.1));
+    border: 2px solid var(--or);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; margin-bottom: 24px;
+  }
+  .jacques-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px; font-weight: 700; color: #fff;
+    margin-bottom: 4px;
+  }
+  .jacques-title { font-size: 13px; color: var(--or); letter-spacing: 1px; margin-bottom: 24px; }
+  .jacques-right {
+    padding: 48px 40px;
+    display: flex; flex-direction: column; justify-content: center; gap: 16px;
+  }
+  .stat-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 20px;
+    background: rgba(212,160,23,0.06);
+    border-left: 3px solid var(--or);
+    border-radius: 0 4px 4px 0;
+  }
+  .stat-number { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 900; color: var(--or); }
+  .stat-label { font-size: 13px; color: rgba(240,232,208,0.7); line-height: 1.4; }
+
+  /* SLIDE 3 — LE PROBLÈME */
+  .slide-probleme {
+    flex-direction: column; align-items: flex-start;
+    padding: 48px 60px;
+    background: var(--noir);
+  }
+  .section-tag {
+    font-size: 10px; letter-spacing: 4px; color: var(--rouge);
+    text-transform: uppercase; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-tag::before {
+    content: ''; width: 24px; height: 1px; background: var(--rouge);
+  }
+  .probleme-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 900; color: #fff; line-height: 1.15;
+    margin-bottom: 32px;
+  }
+  .gap-visual {
+    width: 100%; display: flex; gap: 0; height: 80px; border-radius: 8px; overflow: hidden;
+  }
+  .gap-left {
+    flex: 1; background: var(--vert);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: #fff;
+    padding: 0 20px;
+  }
+  .gap-center {
+    width: 80px; background: var(--rouge);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+  }
+  .gap-right {
+    flex: 1; background: rgba(198,40,40,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7);
+    padding: 0 20px;
+  }
+  .gap-labels {
+    display: flex; justify-content: space-between;
+    margin-top: 12px; font-size: 11px;
+    color: rgba(240,232,208,0.4); letter-spacing: 1px;
+  }
+
+  /* SLIDE 4 — FACTEUR HUMAIN */
+  .slide-humain {
+    flex-direction: column; padding: 40px 60px;
+    background: var(--noir);
+  }
+  .human-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    margin-top: 24px; width: 100%;
+  }
+  .human-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 20px;
+    text-align: center;
+  }
+  .human-card .emoji { font-size: 28px; display: block; margin-bottom: 10px; }
+  .human-card .label { font-size: 12px; color: rgba(240,232,208,0.5); }
+  .human-card .impact { font-size: 15px; color: #fff; font-weight: 600; margin-top: 4px; }
+  .human-card.bad { border-color: rgba(198,40,40,0.4); background: rgba(198,40,40,0.05); }
+
+  /* SLIDE 5 — CE QUE ÇA COÛTE */
+  .slide-cout {
+    padding: 40px 60px; flex-direction: column;
+    background: var(--noir);
+  }
+  .cost-items { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; width: 100%; }
+  .cost-item {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 20px;
+    background: rgba(198,40,40,0.08);
+    border: 1px solid rgba(198,40,40,0.2);
+    border-radius: 6px;
+  }
+  .cost-icon { font-size: 24px; flex-shrink: 0; }
+  .cost-text { font-size: 14px; color: rgba(240,232,208,0.85); }
+  .cost-text strong { color: #fff; }
+
+  /* SLIDE 6 — LA SOLUTION */
+  .slide-solution {
+    padding: 40px; flex-direction: column;
+    background: radial-gradient(ellipse at center, rgba(212,160,23,0.1), transparent 70%), var(--noir);
+    text-align: center;
+  }
+  .solution-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 3.5vw, 42px);
+    font-weight: 900; color: #fff;
+    margin-bottom: 8px;
+  }
+  .solution-title .accent { color: var(--or); }
+  .solution-tagline {
+    font-size: 14px; color: rgba(240,232,208,0.6);
+    margin-bottom: 32px;
+  }
+  .pillars { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .pillar {
+    background: rgba(212,160,23,0.08);
+    border: 1px solid rgba(212,160,23,0.3);
+    border-radius: 6px; padding: 16px 20px;
+    min-width: 130px; text-align: center;
+  }
+  .pillar-icon { font-size: 24px; display: block; margin-bottom: 8px; }
+  .pillar-name { font-size: 13px; font-weight: 700; color: var(--or); letter-spacing: 1px; }
+  .pillar-desc { font-size: 11px; color: rgba(240,232,208,0.5); margin-top: 4px; }
+
+  /* SLIDE 7 — PHOTO ANNOTÉE */
+  .slide-photo {
+    padding: 32px 48px; flex-direction: column;
+    background: var(--noir); align-items: flex-start;
+  }
+  .photo-demo {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    margin-top: 20px; width: 100%;
+  }
+  .photo-before {
+    position: relative;
+    background: rgba(30,20,0,0.8);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; overflow: hidden;
+    aspect-ratio: 4/3;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px;
+  }
+  .photo-kitchen {
+    width: 100%; height: 100%;
+    background: 
+      linear-gradient(180deg, rgba(30,20,10,0.3) 0%, rgba(10,8,5,0.8) 100%),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 30px,
+        rgba(255,255,255,0.02) 30px,
+        rgba(255,255,255,0.02) 31px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 40px,
+        rgba(255,255,255,0.02) 40px,
+        rgba(255,255,255,0.02) 41px
+      );
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px; position: relative;
+  }
+  .annotation-circle {
+    position: absolute;
+    width: 60px; height: 60px; border-radius: 50%;
+    border: 3px solid #FF3333;
+    animation: pulse-ring 2s infinite;
+  }
+  .annotation-label {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(198,40,40,0.9);
+    color: #fff; font-size: 10px; font-weight: 700;
+    padding: 4px 10px; border-radius: 3px; letter-spacing: 1px;
+  }
+  .annotation-rect {
+    position: absolute; bottom: 30px; left: 20px;
+    width: 90px; height: 50px;
+    border: 3px solid #FF9800;
+    border-radius: 4px;
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(255,51,51,0.5); }
+    70% { box-shadow: 0 0 0 15px rgba(255,51,51,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,51,51,0); }
+  }
+  .photo-label {
+    position: absolute; bottom: 0; left:0; right:0;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.7);
+    font-size: 11px; color: rgba(255,255,255,0.6);
+    text-align: center;
+  }
+  .nc-list { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .nc-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px;
+    border-radius: 6px; font-size: 12px;
+  }
+  .nc-item.rouge { background: rgba(198,40,40,0.1); border: 1px solid rgba(198,40,40,0.3); }
+  .nc-item.jaune { background: rgba(249,168,37,0.1); border: 1px solid rgba(249,168,37,0.3); }
+  .nc-badge {
+    padding: 2px 8px; border-radius: 3px;
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  .nc-badge.rouge { background: var(--rouge); color: #fff; }
+  .nc-badge.jaune { background: var(--jaune); color: #000; }
+  .nc-desc { color: rgba(240,232,208,0.8); line-height: 1.4; }
+
+  /* SLIDE 8 — MODULES */
+  .slide-modules {
+    padding: 32px 48px; flex-direction: column;
+    background: var(--noir);
+  }
+  .modules-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 20px; width: 100%; }
+  .module-card {
+    background: rgba(212,160,23,0.05);
+    border: 1px solid rgba(212,160,23,0.2);
+    border-radius: 8px; padding: 16px 10px; text-align: center;
+    transition: all 0.3s;
+  }
+  .module-card:hover { background: rgba(212,160,23,0.12); transform: translateY(-4px); }
+  .module-icon { font-size: 28px; display: block; margin-bottom: 10px; }
+  .module-name { font-size: 12px; font-weight: 700; color: var(--or); letter-spacing: 2px; }
+  .module-desc { font-size: 10px; color: rgba(240,232,208,0.5); margin-top: 6px; line-height: 1.4; }
+
+  /* SLIDE 9 — TABLEAU DE BORD */
+  .slide-dashboard {
+    padding: 32px 48px; flex-direction: column;
+    background: var(--noir);
+  }
+  .dashboard-mock {
+    display: grid; grid-template-columns: 1fr 2fr; gap: 16px;
+    margin-top: 20px; width: 100%;
+  }
+  .score-circle {
+    background: rgba(27,94,32,0.15);
+    border: 2px solid rgba(27,94,32,0.5);
+    border-radius: 50%; width: 120px; height: 120px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin: 0 auto;
+  }
+  .score-pct { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900; color: #4CAF50; }
+  .score-label { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
+  .zones-list { display: flex; flex-direction: column; gap: 8px; }
+  .zone-row { display: flex; align-items: center; gap: 12px; }
+  .zone-name { font-size: 11px; color: rgba(240,232,208,0.6); width: 120px; flex-shrink: 0; }
+  .zone-bar { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+  .zone-fill { height: 100%; border-radius: 4px; }
+  .zone-pct { font-size: 11px; font-weight: 600; width: 36px; text-align: right; }
+  .vert { background: #4CAF50; color: #4CAF50; }
+  .jaune-fill { background: var(--jaune); color: var(--jaune); }
+  .rouge-fill { background: var(--rouge); color: var(--rouge); }
+
+  /* SLIDE 10 — PLAN CORRECTIF */
+  .slide-plan {
+    padding: 32px 48px; flex-direction: column;
+    background: var(--noir);
+  }
+  .plan-items { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; width: 100%; }
+  .plan-item {
+    display: grid; grid-template-columns: 32px 1fr auto auto;
+    align-items: center; gap: 12px;
+    padding: 12px 16px; border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .priority-badge {
+    width: 28px; height: 28px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .p1 { background: var(--rouge); color: #fff; }
+  .p2 { background: var(--jaune); color: #000; }
+  .p3 { background: rgba(255,255,255,0.2); color: #fff; }
+  .plan-action { font-size: 12px; color: rgba(240,232,208,0.85); }
+  .plan-delay {
+    font-size: 10px; color: rgba(240,232,208,0.4);
+    white-space: nowrap;
+  }
+  .plan-resp {
+    font-size: 10px; font-weight: 600; color: var(--or);
+    white-space: nowrap;
+  }
+
+  /* SLIDE 11 — AVANT/APRÈS */
+  .slide-avantapres {
+    padding: 32px 48px; flex-direction: column;
+    background: var(--noir);
+  }
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; width: 100%; }
+  .compare-col { border-radius: 8px; overflow: hidden; }
+  .compare-header {
+    padding: 12px 20px; text-align: center;
+    font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  }
+  .avant-header { background: rgba(198,40,40,0.2); color: var(--rouge); }
+  .apres-header { background: rgba(27,94,32,0.2); color: #4CAF50; }
+  .compare-items { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .compare-item { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; color: rgba(240,232,208,0.8); }
+
+  /* SLIDE 12 — FORFAITS */
+  .slide-forfaits {
+    padding: 32px 48px; flex-direction: column;
+    background: var(--noir);
+  }
+  .forfaits-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; width: 100%; }
+  .forfait-card {
+    border-radius: 8px; overflow: hidden;
+    border: 1px solid rgba(212,160,23,0.2);
+    background: rgba(255,255,255,0.02);
+    transition: transform 0.3s;
+  }
+  .forfait-card:hover { transform: translateY(-6px); }
+  .forfait-card.featured { border-color: var(--or); background: rgba(212,160,23,0.06); }
+  .forfait-header { padding: 16px; text-align: center; border-bottom: 1px solid rgba(212,160,23,0.15); }
+  .forfait-name { font-size: 11px; font-weight: 700; letter-spacing: 3px; color: var(--or); }
+  .forfait-price { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 900; color: #fff; margin-top: 8px; }
+  .forfait-price span { font-size: 14px; font-weight: 400; color: rgba(255,255,255,0.4); }
+  .forfait-features { padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .forfait-feature { font-size: 11px; color: rgba(240,232,208,0.7); display: flex; align-items: center; gap: 8px; }
+  .forfait-feature::before { content: '✓'; color: var(--or); font-weight: 700; }
+
+  /* SLIDE 13 — PROMOS */
+  .slide-promo {
+    padding: 32px 48px; flex-direction: column;
+    background: var(--noir);
+  }
+  .promos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; width: 100%; }
+  .promo-card {
+    background: linear-gradient(135deg, rgba(212,160,23,0.12), rgba(212,160,23,0.04));
+    border: 1px solid rgba(212,160,23,0.4);
+    border-radius: 10px; padding: 28px;
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .promo-badge {
+    position: absolute; top: 14px; right: -24px;
+    background: var(--rouge); color: #fff;
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    padding: 4px 32px; transform: rotate(35deg);
+  }
+  .promo-icon { font-size: 44px; display: block; margin-bottom: 12px; }
+  .promo-name { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: #fff; }
+  .promo-value { font-size: 13px; color: var(--or); margin-top: 6px; }
+  .promo-desc { font-size: 11px; color: rgba(240,232,208,0.5); margin-top: 10px; line-height: 1.5; }
+
+  /* SLIDE 14 — ROI */
+  .slide-roi {
+    padding: 32px 48px; flex-direction: column;
+    background: var(--noir);
+  }
+  .roi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; width: 100%; }
+  .roi-card {
+    background: rgba(27,94,32,0.1); border: 1px solid rgba(27,94,32,0.3);
+    border-radius: 8px; padding: 20px; text-align: center;
+  }
+  .roi-number { font-family: 'Playfair Display', serif; font-size: 40px; font-weight: 900; color: #4CAF50; }
+  .roi-label { font-size: 12px; color: rgba(240,232,208,0.6); margin-top: 6px; line-height: 1.4; }
+
+  /* SLIDE 15 — CTA */
+  .slide-cta {
+    background: radial-gradient(ellipse at center, rgba(212,160,23,0.15), transparent 70%), var(--noir);
+    flex-direction: column; text-align: center;
+  }
+  .cta-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 50px);
+    font-weight: 900; color: #fff; line-height: 1.1;
+    margin-bottom: 12px;
+  }
+  .cta-title .accent { color: var(--or); }
+  .cta-sub { font-size: 15px; color: rgba(240,232,208,0.5); margin-bottom: 36px; }
+  .cta-contacts { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+  .cta-contact {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 24px;
+    background: rgba(212,160,23,0.1);
+    border: 1px solid rgba(212,160,23,0.3);
+    border-radius: 6px; font-size: 14px; color: #fff;
+  }
+  .cta-contact .cta-icon { color: var(--or); }
+  .cta-offer {
+    margin-top: 24px; font-size: 12px; color: var(--or);
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  /* NARRATOR CONTROLS */
+  .narrator-bar {
+    position: fixed; bottom: 60px; left:0; right:0; z-index:99;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 32px;
+    background: rgba(15,12,5,0.97);
+    border-top: 1px solid rgba(212,160,23,0.15);
+    backdrop-filter: blur(10px);
+  }
+  .api-key-input {
+    background: rgba(212,160,23,0.06);
+    border: 1px solid rgba(212,160,23,0.25);
+    color: var(--texte); border-radius: 4px;
+    padding: 5px 10px; font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    width: 200px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .api-key-input:focus { border-color: var(--or); }
+  .api-key-input::placeholder { color: rgba(240,232,208,0.25); }
+  .api-key-input.valid { border-color: #4CAF50; }
+  .api-key-input.error { border-color: var(--rouge); }
+    font-size: 10px; letter-spacing: 2px; color: rgba(212,160,23,0.6);
+    text-transform: uppercase; flex-shrink: 0;
+  }
+  .narrator-btn {
+    background: rgba(212,160,23,0.12);
+    border: 1px solid rgba(212,160,23,0.3);
+    color: var(--or); border-radius: 4px;
+    padding: 6px 14px; font-size: 13px; cursor: pointer;
+    transition: all 0.2s; flex-shrink: 0;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .narrator-btn:hover { background: var(--or); color: var(--noir); }
+  .narrator-btn.active { background: var(--or); color: var(--noir); }
+  .narrator-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .narrator-speed {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: rgba(240,232,208,0.4);
+  }
+  .speed-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 80px; height: 3px;
+    background: rgba(212,160,23,0.2); border-radius: 2px; outline: none;
+    cursor: pointer;
+  }
+  .speed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--or); cursor: pointer;
+  }
+  .narrator-progress {
+    flex: 1; height: 3px;
+    background: rgba(212,160,23,0.1); border-radius: 2px; overflow: hidden;
+  }
+  .narrator-progress-fill {
+    height: 100%; background: var(--or);
+    width: 0%; transition: width 0.5s linear;
+    border-radius: 2px;
+  }
+  .voice-select {
+    background: rgba(212,160,23,0.08);
+    border: 1px solid rgba(212,160,23,0.25);
+    color: var(--texte); border-radius: 4px;
+    padding: 5px 8px; font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; max-width: 160px;
+  }
+  .voice-select option { background: #1a1a1a; color: #fff; }
+  .speaking-indicator {
+    display: flex; gap: 3px; align-items: flex-end;
+    height: 16px; flex-shrink: 0;
+  }
+  .speaking-bar {
+    width: 3px; border-radius: 2px; background: var(--or);
+    animation: soundwave 0.8s ease-in-out infinite;
+  }
+  .speaking-bar:nth-child(2) { animation-delay: 0.15s; }
+  .speaking-bar:nth-child(3) { animation-delay: 0.3s; }
+  .speaking-bar:nth-child(4) { animation-delay: 0.15s; }
+  @keyframes soundwave {
+    0%, 100% { height: 4px; opacity: 0.4; }
+    50% { height: 14px; opacity: 1; }
+  }
+  .speaking-indicator.hidden { visibility: hidden; }
+
+  /* Shared */
+  .slide-section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 2.5vw, 34px);
+    font-weight: 700; color: #fff; margin-bottom: 4px;
+  }
+  .slide-section-sub { font-size: 13px; color: rgba(240,232,208,0.45); letter-spacing: 0.5px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">Verdict <span>Inspection AI</span></div>
+  <div class="slide-counter" id="slideCounter">Diapositive 1 / 15</div>
+  <div class="timer-display" id="timerDisplay">⏱ 00:00</div>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- SLIDES WRAPPER -->
+<div class="slides-wrapper">
+  <div class="slide-visual" id="slideVisual">
+
+    <!-- SLIDE 1 — TITRE -->
+    <div class="slide slide-titre active" id="s1">
+      <div class="verdict-badge">Webinaire • Présentation Officielle</div>
+      <div class="titre-main">La Prochaine Dimension<br>de la <span class="accent">Sécurité Alimentaire</span></div>
+      <div class="titre-sub">Photos annotées • Intelligence artificielle • Conformité MAPAQ en temps réel</div>
+      <div class="titre-chips">
+        <span class="chip">🍽️ Restaurants</span>
+        <span class="chip">📋 MAPAQ</span>
+        <span class="chip">🤖 IA</span>
+        <span class="chip">📸 Preuves visuelles</span>
+        <span class="chip">⚡ Temps réel</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 2 — QUI EST JACQUES -->
+    <div class="slide slide-jacques" id="s2">
+      <div class="jacques-layout">
+        <div class="jacques-left">
+          <div class="jacques-photo-placeholder">👨‍🍳</div>
+          <div class="jacques-name">Jacques Perrier</div>
+          <div class="jacques-title">Fondateur • Verdict Inspection AI</div>
+          <div style="font-size:12px;color:rgba(240,232,208,0.5);line-height:1.6;">Chef-propriétaire • Auditeur certifié<br>Hygiène & Salubrité alimentaire<br>Région Gatineau-Ottawa</div>
+        </div>
+        <div class="jacques-right">
+          <div class="stat-row"><div class="stat-number">20+</div><div class="stat-label">Années d'expertise comme chef-propriétaire et auditeur certifié</div></div>
+          <div class="stat-row"><div class="stat-number">100s</div><div class="stat-label">D'établissements inspectés — restaurants, épiceries, cuisines industrielles</div></div>
+          <div class="stat-row" style="border-left-color:#4CAF50;"><div class="stat-number" style="color:#4CAF50;font-size:20px;">NSF<br>IGA<br>Walmart</div><div class="stat-label">Clients majeurs : Costco, IGA, Walmart, Ecolab, NSF International</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3 — LE PROBLÈME -->
+    <div class="slide slide-probleme" id="s3">
+      <div class="section-tag">Le problème</div>
+      <div class="probleme-title">L'Écart Fatal entre<br>Procédure et Réalité</div>
+      <div class="gap-visual">
+        <div class="gap-left">📄 Ce qui est<br><strong>écrit</strong></div>
+        <div class="gap-center">⚠️</div>
+        <div class="gap-right">🏃 Ce qui se passe<br><strong>vraiment</strong></div>
+      </div>
+      <div class="gap-labels">
+        <span>PROCÉDURES DOCUMENTÉES</span>
+        <span style="color:var(--rouge)">L'ÉCART FATAL</span>
+        <span>RÉALITÉ DU PLANCHER</span>
+      </div>
+      <div style="margin-top:20px;font-size:13px;color:rgba(240,232,208,0.5);line-height:1.7;">
+        Vous pouvez avoir des procédures claires, des équipes formées, une documentation complète.<br>
+        Et quand même obtenir des résultats incohérents — parce que sous pression, <strong style="color:#fff;">le facteur humain prend le dessus.</strong>
+      </div>
+    </div>
+
+    <!-- SLIDE 4 — FACTEUR HUMAIN -->
+    <div class="slide slide-humain" id="s4">
+      <div class="section-tag" style="color:var(--jaune)">Le facteur humain</div>
+      <div class="slide-section-title">L'Inspecteur est Humain.<br>Et C'est le Problème.</div>
+      <div class="human-grid">
+        <div class="human-card bad"><span class="emoji">😴</span><div class="label">Manque de sommeil</div><div class="impact">Note plus sévère</div></div>
+        <div class="human-card bad"><span class="emoji">😤</span><div class="label">Mauvaise journée</div><div class="impact">Jugement altéré</div></div>
+        <div class="human-card bad"><span class="emoji">⏰</span><div class="label">Fin de journée</div><div class="impact">Inspection bâclée</div></div>
+        <div class="human-card bad"><span class="emoji">🗺️</span><div class="label">Secteur inconnu</div><div class="impact">Standards différents</div></div>
+        <div class="human-card bad"><span class="emoji">🤝</span><div class="label">Relation personnelle</div><div class="impact">Partialité possible</div></div>
+        <div class="human-card" style="background:rgba(212,160,23,0.05);border-color:rgba(212,160,23,0.3);"><span class="emoji">🤖</span><div class="label" style="color:var(--or);">Verdict AI</div><div class="impact" style="color:#fff;">Toujours identique</div></div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5 — CE QUE ÇA COÛTE -->
+    <div class="slide slide-cout" id="s5">
+      <div class="section-tag" style="color:var(--rouge)">Les conséquences</div>
+      <div class="slide-section-title">Ce que ça Coûte<br>de Ne Pas Voir</div>
+      <div class="cost-items">
+        <div class="cost-item"><div class="cost-icon">📰</div><div class="cost-text"><strong>Manchettes négatives</strong> — Un seul rapport d'inspection défavorant peut détruire des années de réputation</div></div>
+        <div class="cost-item"><div class="cost-icon">💸</div><div class="cost-text"><strong>Amendes et pénalités MAPAQ</strong> — Des milliers de dollars pour des non-conformités évitables</div></div>
+        <div class="cost-item"><div class="cost-icon">🔒</div><div class="cost-text"><strong>Fermeture temporaire ou permanente</strong> — Zéro revenu, équipe en attente, contrats perdus</div></div>
+        <div class="cost-item"><div class="cost-icon">📉</div><div class="cost-text"><strong>Perte de clients</strong> — 87% des consommateurs évitent un restaurant après un incident de salubrité</div></div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6 — LA SOLUTION -->
+    <div class="slide slide-solution" id="s6">
+      <div class="section-tag" style="color:var(--or);justify-content:center;">La solution</div>
+      <div class="solution-title"><span class="accent">Verdict Inspection AI</span><br>Remplace le Subjectif par le Visuel</div>
+      <div class="solution-tagline">Même règles. Mêmes standards. À chaque inspection. Sans exception.</div>
+      <div class="pillars">
+        <div class="pillar"><span class="pillar-icon">🌡️</span><div class="pillar-name">PUNCH</div><div class="pillar-desc">Températures & alertes capteurs</div></div>
+        <div class="pillar"><span class="pillar-icon">🛡️</span><div class="pillar-name">SÉCURITÉ</div><div class="pillar-desc">Inspections visuelles MAPAQ</div></div>
+        <div class="pillar"><span class="pillar-icon">🧼</span><div class="pillar-name">HYGIÈNE</div><div class="pillar-desc">Nettoyage & désinfection</div></div>
+        <div class="pillar"><span class="pillar-icon">📦</span><div class="pillar-name">CONTRÔLE</div><div class="pillar-desc">Réception fournisseurs</div></div>
+        <div class="pillar"><span class="pillar-icon">🎓</span><div class="pillar-name">ACADÉMIE</div><div class="pillar-desc">Formation du personnel</div></div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7 — PHOTO ANNOTÉE -->
+    <div class="slide slide-photo" id="s7">
+      <div class="section-tag" style="color:var(--or);">Innovation visuelle</div>
+      <div class="slide-section-title">La Photo Annotée :<br>La Preuve Irréfutable</div>
+      <div class="photo-demo">
+        <div class="photo-before">
+          <div class="photo-kitchen">
+            🍳
+            <div class="annotation-circle" style="top:30%;left:55%;"></div>
+            <div class="annotation-rect"></div>
+            <div class="annotation-label">NC DÉTECTÉE</div>
+          </div>
+          <div class="photo-label">📸 Photo horodatée • Géolocalisée • Liée au rapport</div>
+        </div>
+        <div class="nc-list">
+          <div style="font-size:11px;color:rgba(212,160,23,0.7);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Non-conformités détectées</div>
+          <div class="nc-item rouge"><span class="nc-badge rouge">ÉLEVÉ</span><div class="nc-desc">Produit alimentaire sans étiquette de date — risque contamination croisée</div></div>
+          <div class="nc-item jaune"><span class="nc-badge jaune">MOYEN</span><div class="nc-desc">Surface de travail mal désinfectée — zone de préparation des viandes</div></div>
+          <div class="nc-item rouge"><span class="nc-badge rouge">ÉLEVÉ</span><div class="nc-desc">Température du frigo à 6°C — limite réglementaire MAPAQ dépassée</div></div>
+          <div style="margin-top:8px;padding:10px;background:rgba(27,94,32,0.1);border:1px solid rgba(27,94,32,0.3);border-radius:6px;font-size:11px;color:#4CAF50;">✅ Plan correctif généré automatiquement par l'IA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8 — MODULES DÉTAIL -->
+    <div class="slide slide-modules" id="s8">
+      <div class="section-tag" style="color:var(--or);">Plateforme complète</div>
+      <div class="slide-section-title">5 Modules. 1 Écosystème.<br>Zéro Non-Conformité Cachée.</div>
+      <div class="modules-grid">
+        <div class="module-card"><span class="module-icon">🌡️</span><div class="module-name">PUNCH</div><div class="module-desc">Relevés températures, alertes anomalies, capteurs connectés 24/7</div></div>
+        <div class="module-card"><span class="module-icon">🛡️</span><div class="module-name">SÉCURITÉ</div><div class="module-desc">Inspections MAPAQ avec photos annotées, scores automatiques</div></div>
+        <div class="module-card"><span class="module-icon">🧼</span><div class="module-name">HYGIÈNE</div><div class="module-desc">Protocoles nettoyage, désinfection, vérification zones critiques</div></div>
+        <div class="module-card"><span class="module-icon">📦</span><div class="module-name">CONTRÔLE</div><div class="module-desc">Réception fournisseurs, traçabilité, conformité livraisons</div></div>
+        <div class="module-card"><span class="module-icon">🎓</span><div class="module-name">ACADÉMIE</div><div class="module-desc">Formation interactives, quiz MAPAQ, suivi certifications</div></div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9 — TABLEAU DE BORD -->
+    <div class="slide slide-dashboard" id="s9">
+      <div class="section-tag" style="color:var(--or);">Tableau de bord propriétaire</div>
+      <div class="slide-section-title">Voyez Tout.<br>Avant que le MAPAQ Arrive.</div>
+      <div class="dashboard-mock">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+          <div class="score-circle"><div class="score-pct">83%</div><div class="score-label">CONFORMITÉ</div></div>
+          <div style="text-align:center;">
+            <div style="font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1px;">TENDANCE</div>
+            <div style="font-size:20px;color:#4CAF50;font-weight:700;">↑ +12%</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.3);">vs mois dernier</div>
+          </div>
+          <div style="width:100%;background:rgba(27,94,32,0.15);border:1px solid rgba(27,94,32,0.3);border-radius:6px;padding:12px;text-align:center;">
+            <div style="font-size:10px;color:#4CAF50;letter-spacing:1px;">STATUT MAPAQ</div>
+            <div style="font-size:14px;color:#fff;font-weight:600;margin-top:4px;">✅ EN CONFORMITÉ</div>
+          </div>
+        </div>
+        <div class="zones-list">
+          <div style="font-size:10px;color:rgba(212,160,23,0.6);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Score par zone</div>
+          <div class="zone-row"><div class="zone-name">Cuisine chaude</div><div class="zone-bar"><div class="zone-fill vert" style="width:92%"></div></div><div class="zone-pct vert">92%</div></div>
+          <div class="zone-row"><div class="zone-name">Entreposage froid</div><div class="zone-bar"><div class="zone-fill vert" style="width:88%"></div></div><div class="zone-pct vert">88%</div></div>
+          <div class="zone-row"><div class="zone-name">Zone de préparation</div><div class="zone-bar"><div class="zone-fill jaune-fill" style="width:74%"></div></div><div class="zone-pct jaune-fill">74%</div></div>
+          <div class="zone-row"><div class="zone-name">Réception</div><div class="zone-bar"><div class="zone-fill vert" style="width:95%"></div></div><div class="zone-pct vert">95%</div></div>
+          <div class="zone-row"><div class="zone-name">Vestiaires/Toilettes</div><div class="zone-bar"><div class="zone-fill rouge-fill" style="width:61%"></div></div><div class="zone-pct rouge-fill">61%</div></div>
+          <div class="zone-row"><div class="zone-name">Formation personnel</div><div class="zone-bar"><div class="zone-fill vert" style="width:89%"></div></div><div class="zone-pct vert">89%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10 — PLAN CORRECTIF -->
+    <div class="slide slide-plan" id="s10">
+      <div class="section-tag" style="color:var(--or);">Intelligence artificielle</div>
+      <div class="slide-section-title">Plan Correctif Automatique.<br>Généré en Temps Réel.</div>
+      <div class="plan-items">
+        <div class="plan-item"><div class="priority-badge p1">P1</div><div class="plan-action">Rétablir la température du réfrigérateur principal — limite MAPAQ dépassée (6°C)</div><div class="plan-delay">⏱ 2h max</div><div class="plan-resp">Superviseur</div></div>
+        <div class="plan-item"><div class="priority-badge p1">P1</div><div class="plan-action">Retirer et étiqueter tous les produits sans date de réception visible</div><div class="plan-delay">⏱ Immédiat</div><div class="plan-resp">Chef</div></div>
+        <div class="plan-item"><div class="priority-badge p2">P2</div><div class="plan-action">Désinfection complète de la surface de préparation des viandes — zone B3</div><div class="plan-delay">⏱ 4h</div><div class="plan-resp">Équipe</div></div>
+        <div class="plan-item"><div class="priority-badge p2">P2</div><div class="plan-action">Vérification et nettoyage complet des vestiaires — non-conformité hygiène</div><div class="plan-delay">⏱ Aujourd'hui</div><div class="plan-resp">Responsable</div></div>
+        <div class="plan-item"><div class="priority-badge p3">P3</div><div class="plan-action">Formation rappel MAPAQ pour 3 nouveaux employés — module Hygiène de base</div><div class="plan-delay">⏱ Cette semaine</div><div class="plan-resp">Gérant</div></div>
+      </div>
+    </div>
+
+    <!-- SLIDE 11 — AVANT/APRÈS -->
+    <div class="slide slide-avantapres" id="s11">
+      <div class="section-tag" style="color:var(--or);">Transformation</div>
+      <div class="slide-section-title">Avant Verdict.<br>Après Verdict.</div>
+      <div class="compare-grid">
+        <div class="compare-col">
+          <div class="compare-header avant-header">❌ SANS VERDICT</div>
+          <div class="compare-items">
+            <div class="compare-item">📝 Fiches papier remplies après coup</div>
+            <div class="compare-item">👁️ Inspection subjective selon l'humeur</div>
+            <div class="compare-item">😱 Surprise lors de l'inspection MAPAQ</div>
+            <div class="compare-item">📊 Aucune donnée comparative</div>
+            <div class="compare-item">🔥 Réaction après l'incident</div>
+            <div class="compare-item">💸 Amendes et correctifs coûteux</div>
+          </div>
+        </div>
+        <div class="compare-col">
+          <div class="compare-header apres-header">✅ AVEC VERDICT AI</div>
+          <div class="compare-items" style="background:rgba(27,94,32,0.05);">
+            <div class="compare-item">📸 Preuves visuelles horodatées</div>
+            <div class="compare-item">🤖 Standards identiques à chaque inspection</div>
+            <div class="compare-item">📈 Tableau de bord en temps réel</div>
+            <div class="compare-item">🎯 Tendances et prédictions de risque</div>
+            <div class="compare-item">⚡ Plan correctif automatique immédiat</div>
+            <div class="compare-item">🏆 Conformité MAPAQ maintenue</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 12 — FORFAITS -->
+    <div class="slide slide-forfaits" id="s12">
+      <div class="section-tag" style="color:var(--or);">Investissement</div>
+      <div class="slide-section-title">Trois Forfaits.<br>Un Seul Objectif : Votre Conformité.</div>
+      <div class="forfaits-grid">
+        <div class="forfait-card">
+          <div class="forfait-header"><div class="forfait-name">ESSENTIEL</div><div class="forfait-price">199<span>$/mois</span></div></div>
+          <div class="forfait-features">
+            <div class="forfait-feature">Module PUNCH (températures)</div>
+            <div class="forfait-feature">Inspections visuelles SÉCURITÉ</div>
+            <div class="forfait-feature">Rapport MAPAQ automatique</div>
+            <div class="forfait-feature">Plan correctif AI</div>
+            <div class="forfait-feature">1 établissement</div>
+          </div>
+        </div>
+        <div class="forfait-card featured">
+          <div class="forfait-header" style="background:rgba(212,160,23,0.1);">
+            <div style="font-size:9px;color:#fff;letter-spacing:1px;margin-bottom:4px;">⭐ POPULAIRE</div>
+            <div class="forfait-name">COMPLET</div>
+            <div class="forfait-price">299<span>$/mois</span></div>
+          </div>
+          <div class="forfait-features">
+            <div class="forfait-feature">Tous les modules (5)</div>
+            <div class="forfait-feature">Module ACADÉMIE inclus</div>
+            <div class="forfait-feature">Tablette préconfigurée offerte</div>
+            <div class="forfait-feature">Rapports avancés</div>
+            <div class="forfait-feature">Support prioritaire</div>
+          </div>
+        </div>
+        <div class="forfait-card">
+          <div class="forfait-header"><div class="forfait-name">PREMIUM</div><div class="forfait-price">399<span>$/mois</span></div></div>
+          <div class="forfait-features">
+            <div class="forfait-feature">Tout du forfait Complet</div>
+            <div class="forfait-feature">Multi-établissements</div>
+            <div class="forfait-feature">Capteurs température offerts</div>
+            <div class="forfait-feature">API & intégrations</div>
+            <div class="forfait-feature">Gestionnaire dédié</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 13 — PROMOS -->
+    <div class="slide slide-promo" id="s13">
+      <div class="section-tag" style="color:var(--or);">Offres spéciales</div>
+      <div class="slide-section-title">Deux Promotions<br>Exclusives Ce Soir.</div>
+      <div class="promos-grid">
+        <div class="promo-card">
+          <div class="promo-badge">VALEUR 998$</div>
+          <span class="promo-icon">🌡️</span>
+          <div class="promo-name">Capteurs Connectés</div>
+          <div class="promo-value">Offerts avec tout abonnement annuel</div>
+          <div class="promo-desc">Capteurs de température WiFi préconfigurés. Alertes automatiques 24/7. Données en temps réel dans votre tableau de bord.</div>
+        </div>
+        <div class="promo-card">
+          <div class="promo-badge">OFFERT</div>
+          <span class="promo-icon">📱</span>
+          <div class="promo-name">Tablette Préconfigurée</div>
+          <div class="promo-value">Avec forfait Complet ou Premium</div>
+          <div class="promo-desc">Tablette tactile prête à l'emploi avec Verdict Inspection AI installé. Branchez. Inspectez. C'est tout.</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;text-align:center;padding:12px;background:rgba(198,40,40,0.1);border:1px solid rgba(198,40,40,0.3);border-radius:6px;">
+        <span style="font-size:12px;color:var(--rouge);font-weight:600;">⏰ Ces offres sont valides 7 jours pour les participants de ce webinaire uniquement</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 14 — ROI -->
+    <div class="slide slide-roi" id="s14">
+      <div class="section-tag" style="color:#4CAF50;">Retour sur investissement</div>
+      <div class="slide-section-title">Le Calcul Est Simple.<br>La Conformité Rapporte.</div>
+      <div class="roi-grid">
+        <div class="roi-card"><div class="roi-number">1</div><div class="roi-label">Amende MAPAQ évitée couvre plusieurs mois d'abonnement</div></div>
+        <div class="roi-card"><div class="roi-number">3h</div><div class="roi-label">De préparation économisées avant chaque inspection officielle</div></div>
+        <div class="roi-card"><div class="roi-number">0</div><div class="roi-label">Surprise lors de votre prochaine visite du MAPAQ</div></div>
+      </div>
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;">
+        <div style="padding:14px;background:rgba(27,94,32,0.08);border:1px solid rgba(27,94,32,0.3);border-radius:6px;font-size:12px;color:rgba(240,232,208,0.7);">
+          <strong style="color:#4CAF50;display:block;margin-bottom:6px;">✅ Ce que vous évitez</strong>
+          Fermeture temporaire (5 000$ à 50 000$ de pertes) • Amendes MAPAQ • Réputation endommagée
+        </div>
+        <div style="padding:14px;background:rgba(212,160,23,0.06);border:1px solid rgba(212,160,23,0.2);border-radius:6px;font-size:12px;color:rgba(240,232,208,0.7);">
+          <strong style="color:var(--or);display:block;margin-bottom:6px;">📈 Ce que vous gagnez</strong>
+          Tranquillité d'esprit • Équipe responsabilisée • Conformité documentée • Avantage concurrentiel
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 15 — CTA -->
+    <div class="slide slide-cta" id="s15">
+      <div class="section-tag" style="color:var(--or);justify-content:center;">Passez à l'action</div>
+      <div class="cta-title">Réservez Votre<br><span class="accent">Démo Privée Gratuite</span></div>
+      <div class="cta-sub">30 minutes. En direct. Sur votre propre établissement.</div>
+      <div class="cta-contacts">
+        <div class="cta-contact"><span class="cta-icon">📧</span> info@verdictinspection-ai.com</div>
+        <div class="cta-contact"><span class="cta-icon">📞</span> 1-819-525-4555</div>
+        <div class="cta-contact"><span class="cta-icon">🌐</span> verdictinspection-ai.com</div>
+      </div>
+      <div class="cta-offer">🎁 Offre valide 7 jours • Places limitées • Démo gratuite sans engagement</div>
+      <div style="margin-top:24px;font-size:12px;color:rgba(240,232,208,0.3);">© 2025 Verdict Inspection AI • Jacques Perrier • Gatineau, Québec</div>
+    </div>
+
+  </div><!-- end slide-visual -->
+
+  <!-- NARRATION PANEL -->
+  <div class="narration-panel">
+    <div class="narration-header">
+      <div class="mic-icon">🎙️</div>
+      <div class="narration-label">Script de narration</div>
+      <div class="narration-time" id="narrationTime">~2 min</div>
+    </div>
+    <div class="narration-text" id="narrationText"></div>
+  </div>
+</div>
+
+<!-- NARRATOR BAR -->
+<div class="narrator-bar">
+  <div class="narrator-label">🎙️ ElevenLabs</div>
+  <input type="password" id="apiKeyInput" class="api-key-input" placeholder="Clé API ElevenLabs…" title="Entrez votre clé API ElevenLabs">
+  <select class="voice-select" id="voiceSelect" title="Choisir la voix">
+    <option value="XB0fDUnXU5powFXDhCwa">Charlotte (Féminine)</option>
+    <option value="N2lVS1w4EtoT3dr4eOWO">Callum (Masculin)</option>
+    <option value="GBv7mTt0atIp3Br8iCZE">Thomas (FR Masculin)</option>
+    <option value="ErXwobaYiN019PkySvjV">Antoni (Masculin)</option>
+    <option value="pqHfZKP75CvOlQylNhV4">Lily (Féminine)</option>
+    <option value="jsCqWAovK2LkecY7zXl4">Freya (Féminine)</option>
+  </select>
+  <button class="narrator-btn" id="playBtn" onclick="narratorPlay()">▶ Lire</button>
+  <button class="narrator-btn" id="pauseBtn" onclick="narratorPause()" disabled>⏸ Pause</button>
+  <button class="narrator-btn" id="stopBtn" onclick="narratorStop()" disabled>⏹ Stop</button>
+  <div class="speaking-indicator hidden" id="speakingIndicator">
+    <div class="speaking-bar" style="height:6px"></div>
+    <div class="speaking-bar" style="height:10px"></div>
+    <div class="speaking-bar" style="height:14px"></div>
+    <div class="speaking-bar" style="height:8px"></div>
+  </div>
+  <div class="narrator-progress"><div class="narrator-progress-fill" id="narratorProgressFill"></div></div>
+  <div id="narratorStatus" style="font-size:11px;color:rgba(212,160,23,0.6);flex-shrink:0;min-width:80px;"></div>
+</div>
+<audio id="narratorAudio" style="display:none"></audio>
+
+<!-- NAV BAR -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)" disabled>← Précédent</button>
+  <div class="slide-dots" id="slideDots"></div>
+  <button class="nav-btn primary" id="nextBtn" onclick="changeSlide(1)">Suivant →</button>
+</div>
+
+<script>
+const narrations = [
+  {
+    time: "~2 min",
+    text: `<blockquote>« Bonsoir tout le monde. Bienvenue à ce webinaire. Je m'appelle Jacques Perrier, fondateur de Verdict Inspection AI. »</blockquote>
+Ce soir, je ne vais pas vous parler de théories. Je ne vais pas vous présenter des cadres conceptuels ou des modèles de gestion inventés dans un bureau.<br><br>
+Je vais vous montrer <em>ce que j'ai construit</em> — après 20 ans sur le terrain, dans des centaines de cuisines, à faire exactement ce que le MAPAQ fait quand il frappe à votre porte.<br><br>
+<blockquote>« La sécurité alimentaire n'est pas un document. C'est ce qui se décide en temps réel, sur le plancher, sous pression. »</blockquote>
+Et j'ai une question pour vous ce soir : <em>Est-ce que vous savez vraiment ce qui se passe dans votre cuisine en ce moment ?</em>`
+  },
+  {
+    time: "~3 min",
+    text: `<blockquote>« Permettez-moi de me présenter rapidement. »</blockquote>
+J'ai passé plus de 20 ans comme chef-propriétaire — j'ai géré des cuisines sous pression, des équipes, des fournisseurs.<br><br>
+Ensuite, je suis devenu auditeur certifié en hygiène et salubrité. J'ai inspecté des centaines d'établissements pour des clients comme <em>Costco, IGA, Walmart, Ecolab et NSF International</em>.<br><br>
+Ce double parcours — côté restaurateur ET côté auditeur — m'a donné quelque chose de rare : <em>je sais exactement ce que l'inspecteur cherche, et je sais exactement pourquoi les restaurants échouent.</em><br><br>
+<blockquote>« C'est de là qu'est né Verdict Inspection AI. »</blockquote>`
+  },
+  {
+    time: "~4 min",
+    text: `<blockquote>« Voici le problème fondamental que j'ai observé pendant 20 ans. »</blockquote>
+Vous pouvez avoir les meilleures procédures du monde. Des formations complètes. Des documents impeccables.<br><br>
+Et quand même recevoir une non-conformité lors d'une inspection MAPAQ. Pourquoi ?<br><br>
+Parce qu'il y a toujours un <em>écart fatal</em> entre ce qui est écrit et ce qui se passe vraiment sur le plancher.<br><br>
+Sous la pression du service, les raccourcis apparaissent. L'équipe change. La fatigue s'installe. Et personne ne voit ce qui se passe — jusqu'à ce que l'inspecteur arrive.<br><br>
+<blockquote>« Verdict Inspection AI ferme cet écart. Pour de bon. »</blockquote>`
+  },
+  {
+    time: "~4 min",
+    text: `<blockquote>« J'ai été cet inspecteur pendant 20 ans. Et je vais vous dire quelque chose que personne ne dit. »</blockquote>
+L'inspection humaine est <em>subjective par nature</em>. Ce n'est pas un manque de compétence — c'est humain.<br><br>
+J'ai vu des collègues excellents noter différemment le même établissement selon qu'ils venaient de manger, d'avoir une mauvaise nuit, ou d'être en fin de journée.<br><br>
+Un inspecteur qui connaît bien le quartier sera plus indulgent. Un inspecteur sous pression de quota sera plus sévère. Une bonne relation avec le propriétaire peut influencer le rapport.<br><br>
+<em>Ce n'est pas ce que votre restaurant mérite. Ce n'est pas ce que vos clients méritent.</em><br><br>
+<blockquote>« L'IA n'a pas de mauvaises journées. Elle applique exactement les mêmes règles à 6h du matin comme à 18h. »</blockquote>`
+  },
+  {
+    time: "~3 min",
+    text: `<blockquote>« Parlons de ce que ça coûte vraiment de ne pas voir. »</blockquote>
+Une fermeture temporaire — même 48 heures — peut représenter de <em>5 000 $ à 50 000 $</em> de pertes selon votre volume.<br><br>
+Les amendes MAPAQ s'accumulent. La réputation, elle, ne se répare pas facilement.<br><br>
+Selon une étude récente, <em>87% des consommateurs évitent un restaurant</em> après avoir lu un rapport d'inspection négatif en ligne.<br><br>
+Et le pire ? Dans la majorité des cas, ces problèmes étaient <em>visibles et évitables</em> — si quelqu'un avait regardé avec les bons outils.<br><br>
+<blockquote>« C'est exactement ce que Verdict Inspection AI vous permet de faire — voir avant d'être vu. »</blockquote>`
+  },
+  {
+    time: "~4 min",
+    text: `<blockquote>« Voici la solution que j'ai construite. »</blockquote>
+Verdict Inspection AI est une plateforme SaaS complète — cinq modules interconnectés — qui transforme vos inspections en <em>preuves visuelles documentées</em>, avec des plans correctifs générés automatiquement par l'IA.<br><br>
+<em>PUNCH</em> — vos températures surveillées en temps réel, avec alertes automatiques.<br>
+<em>SÉCURITÉ</em> — vos inspections MAPAQ avec photos annotées et scores automatiques.<br>
+<em>HYGIÈNE</em> — suivi des protocoles de nettoyage et désinfection.<br>
+<em>CONTRÔLE</em> — réception des fournisseurs et traçabilité.<br>
+<em>ACADÉMIE</em> — formation interactive de votre personnel.<br><br>
+<blockquote>« Un seul système. Cinq modules. Zéro non-conformité cachée. »</blockquote>`
+  },
+  {
+    time: "~5 min",
+    text: `<blockquote>« Laissez-moi vous montrer la fonctionnalité qui change tout. »</blockquote>
+L'inspecteur traditionnel écrit des notes. Cochent des cases. Rédige un rapport plusieurs heures plus tard — basé sur sa mémoire.<br><br>
+Avec Verdict Inspection AI, on prend une <em>photo directement dans la plateforme</em>. Cette photo est immédiatement horodatée, géolocalisée, et liée au rapport.<br><br>
+Ensuite — et c'est là que ça change tout — on <em>annote directement sur la photo</em>. On dessine un cercle rouge sur le produit non étiqueté. Un rectangle orange sur la surface mal désinfectée.<br><br>
+<em>On voit exactement où est le problème. Impossible de le nier. Impossible de l'interpréter autrement.</em><br><br>
+Et immédiatement, l'IA génère le plan correctif avec priorité, délai et responsable.<br><br>
+<blockquote>« La photo annotée ne ment pas. C'est ça, la prochaine dimension de la sécurité alimentaire. »</blockquote>`
+  },
+  {
+    time: "~4 min",
+    text: `<blockquote>« Cinq modules — voici ce que chacun fait concrètement pour vous. »</blockquote>
+<em>PUNCH</em> : Plus jamais de relevé de température oublié ou falsifié. Les données arrivent en temps réel. Une alerte s'envoie automatiquement si la température dépasse la limite MAPAQ.<br><br>
+<em>SÉCURITÉ</em> : Vos inspections internes ressemblent maintenant à une vraie inspection officielle — avec scores, photos, annotations et rapport professionnel.<br><br>
+<em>HYGIÈNE</em> : Chaque protocole de nettoyage est documenté avec une preuve photographique. Votre équipe sait exactement quoi faire et comment le prouver.<br><br>
+<em>CONTRÔLE</em> : Chaque livraison est vérifiée et tracée. Vous savez exactement ce qui est entré dans votre cuisine et quand.<br><br>
+<em>ACADÉMIE</em> : Vos nouveaux employés se forment sur les standards MAPAQ directement dans la plateforme, avec quiz interactifs et suivi de progression.<br><br>
+<blockquote>« Cinq modules. Un seul tableau de bord. Une seule plateforme. »</blockquote>`
+  },
+  {
+    time: "~4 min",
+    text: `<blockquote>« Le tableau de bord propriétaire — c'est ici que tout se connecte. »</blockquote>
+Imaginez ouvrir votre téléphone le matin et voir, en un coup d'œil, le score de conformité de votre établissement. Zone par zone. Employé par employé.<br><br>
+Vous voyez que la zone de préparation des viandes est à <em>74%</em> — vous savez exactement pourquoi, avec les photos à l'appui.<br><br>
+Vous voyez que les vestiaires sont à <em>61%</em> — vous envoyez immédiatement le responsable corriger la situation.<br><br>
+Et vous voyez votre tendance générale — <em>+12% ce mois-ci</em>. Votre conformité s'améliore. Votre équipe s'améliore.<br><br>
+<blockquote>« Vous voyez vos tendances avant que le MAPAQ vous voie. C'est ça, la vraie gestion proactive. »</blockquote>`
+  },
+  {
+    time: "~4 min",
+    text: `<blockquote>« Parlons du plan correctif automatique — c'est là que l'IA fait sa magie. »</blockquote>
+Avant, après une inspection, le responsable devait rédiger lui-même le plan correctif. Décider des priorités. Assigner les tâches. Fixer les délais.<br><br>
+Avec Verdict Inspection AI, <em>tout ça se génère automatiquement</em>. Dès qu'une non-conformité est documentée, l'IA produit :<br><br>
+• La priorité (<em>P1 critique, P2 moyen, P3 faible</em>)<br>
+• Le délai de correction recommandé<br>
+• Le responsable assigné<br>
+• La description claire de l'action à poser<br><br>
+Votre équipe reçoit ses instructions. Vous suivez l'exécution en temps réel.<br><br>
+<blockquote>« Plus de réunions d'urgence. Plus de confusion après une inspection. L'IA gère. Vous exécutez. »</blockquote>`
+  },
+  {
+    time: "~4 min",
+    text: `<blockquote>« Laissez-moi vous montrer la différence concrète — avant et après Verdict Inspection AI. »</blockquote>
+<em>Avant</em> : Des fiches papier remplies à la fin de la journée. Des inspections qui varient selon l'humeur. Aucune preuve visuelle. La surprise lors de l'inspection MAPAQ. Des amendes évitables.<br><br>
+<em>Après</em> : Chaque inspection est documentée avec des photos horodatées. Les mêmes standards sont appliqués à chaque fois par tout le monde. Vous avez un tableau de bord en temps réel. Vous prévoyez les risques avant qu'ils deviennent des problèmes.<br><br>
+La différence n'est pas juste technologique — elle est <em>culturelle</em>. Vos employés savent qu'ils seront documentés. Alors ils font les choses correctement dès le départ.<br><br>
+<blockquote>« Ce n'est pas de la surveillance. C'est de la responsabilisation. Et ça change tout. »</blockquote>`
+  },
+  {
+    time: "~3 min",
+    text: `<blockquote>« Trois forfaits pour répondre à tous les types d'établissements. »</blockquote>
+<em>Essentiel à 199 $/mois</em> — Pour démarrer. Températures, inspections SÉCURITÉ, rapport MAPAQ automatique, plan correctif AI. Idéal pour un petit restaurant qui veut commencer à se protéger.<br><br>
+<em>Complet à 299 $/mois</em> — Notre forfait le plus populaire. Les cinq modules, le module ACADÉMIE, une tablette préconfigurée offerte et un support prioritaire.<br><br>
+<em>Premium à 399 $/mois</em> — Pour les exploitants multi-sites. Capteurs de température offerts, rapports avancés, API et intégrations, gestionnaire dédié.<br><br>
+<blockquote>« Pour le prix d'une amende MAPAQ, vous pouvez avoir 12 mois de conformité garantie. »</blockquote>`
+  },
+  {
+    time: "~3 min",
+    text: `<blockquote>« Ce soir, pour les participants de ce webinaire seulement — deux promotions spéciales. »</blockquote>
+<em>Promo Capteurs</em> — Nos capteurs de température connectés WiFi, d'une valeur de 998 $, sont inclus gratuitement avec tout abonnement annuel. Ces capteurs surveillent vos frigos et congélateurs 24h/24 et vous alertent automatiquement si une limite est dépassée.<br><br>
+<em>Promo Tablette</em> — Une tablette tactile entièrement préconfigurée avec Verdict Inspection AI installé, offerte avec les forfaits Complet et Premium. Vous branchez. Vous inspectez. C'est tout.<br><br>
+Ces offres sont <em>valides 7 jours</em> pour les participants de ce soir uniquement.<br><br>
+<blockquote>« Ce sont des outils qui normalement s'achètent en extra. Ce soir, ils font partie du package. »</blockquote>`
+  },
+  {
+    time: "~3 min",
+    text: `<blockquote>« Parlons du retour sur investissement — parce que c'est la vraie question. »</blockquote>
+Une seule fermeture temporaire de 48 heures peut représenter de 5 000 $ à 50 000 $ de pertes selon votre volume d'affaires. Une amende MAPAQ sévère peut atteindre plusieurs milliers de dollars.<br><br>
+Votre abonnement Verdict Inspection AI — c'est 199 à 399 $ par mois. <em>Une seule amende évitée paie des années d'abonnement.</em><br><br>
+Mais au-delà du chiffre, ce que vous achetez vraiment c'est la tranquillité d'esprit. Savoir que votre établissement est en ordre. Que votre équipe sait quoi faire. Que vous avez les preuves pour le démontrer.<br><br>
+<blockquote>« La conformité n'est pas une dépense. C'est un investissement dans la pérennité de votre restaurant. »</blockquote>`
+  },
+  {
+    time: "~2 min",
+    text: `<blockquote>« Merci d'avoir été avec nous ce soir. »</blockquote>
+Vous avez vu comment Verdict Inspection AI transforme la façon dont les restaurants gèrent leur conformité MAPAQ — avec des preuves visuelles, une IA qui génère les plans correctifs, et un tableau de bord qui vous donne le contrôle total.<br><br>
+La prochaine étape est simple : <em>réservez votre démo privée gratuite de 30 minutes.</em><br><br>
+On va regarder ensemble votre établissement. On va vous montrer exactement comment la plateforme fonctionne dans votre contexte. Aucun engagement. Aucune pression.<br><br>
+📧 <em>info@verdictinspection-ai.com</em><br>
+📞 <em>1-819-525-4555</em><br>
+🌐 <em>verdictinspection-ai.com</em><br><br>
+<blockquote>« J'ai arrêté d'écrire sur le problème. Je l'ai construit. Ce soir, c'est votre tour de passer à l'action. »</blockquote>`
+  }
+];
+
+// ── State ─────────────────────────────────────────────────
+let currentSlide = 0;
+const total = narrations.length;
+let timerInterval, seconds = 0;
+let isPlaying = false, isPaused = false;
+let audioCache = {}; // Cache audio blobs by slide index
+let narratorProgressInterval = null;
+
+// ── Helpers ───────────────────────────────────────────────
+function pad(n) { return n < 10 ? '0' + n : n; }
+
+function stripHtml(html) {
+  return html
+    .replace(/<blockquote>/gi, '. ')
+    .replace(/<\/blockquote>/gi, '. ')
+    .replace(/<br\s*\/?>/gi, '. ')
+    .replace(/<em>/gi, '').replace(/<\/em>/gi, '')
+    .replace(/<strong>/gi, '').replace(/<\/strong>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/📧|📞|🌐|✅|❌|📸|🤖|📊|⚡|🎯|🏆|📈|🔥/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\.\s*\./g, '.').trim();
+}
+
+function getApiKey() {
+  return document.getElementById('apiKeyInput').value.trim();
+}
+
+function getVoiceId() {
+  return document.getElementById('voiceSelect').value;
+}
+
+function setStatus(msg, color) {
+  const el = document.getElementById('narratorStatus');
+  el.textContent = msg;
+  el.style.color = color || 'rgba(212,160,23,0.6)';
+}
+
+// ── Timer ─────────────────────────────────────────────────
+function startTimer() {
+  timerInterval = setInterval(() => {
+    seconds++;
+    document.getElementById('timerDisplay').textContent =
+      `⏱ ${pad(Math.floor(seconds/60))}:${pad(seconds%60)}`;
+  }, 1000);
+}
+
+// ── Dots ──────────────────────────────────────────────────
+function buildDots() {
+  const dotsEl = document.getElementById('slideDots');
+  dotsEl.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => { narratorStop(); goTo(i); };
+    dotsEl.appendChild(d);
+  }
+}
+
+// ── Navigation ────────────────────────────────────────────
+function goTo(n) {
+  document.getElementById('s' + (currentSlide + 1)).classList.remove('active');
+  document.querySelectorAll('.dot')[currentSlide].classList.remove('active');
+  currentSlide = n;
+  document.getElementById('s' + (currentSlide + 1)).classList.add('active');
+  document.querySelectorAll('.dot')[currentSlide].classList.add('active');
+  document.getElementById('slideCounter').textContent = `Diapositive ${currentSlide + 1} / ${total}`;
+  document.getElementById('narrationText').innerHTML = narrations[currentSlide].text;
+  document.getElementById('narrationTime').textContent = narrations[currentSlide].time;
+  document.getElementById('narrationText').scrollTop = 0;
+  document.getElementById('progressFill').style.width = ((currentSlide + 1) / total * 100) + '%';
+  document.getElementById('prevBtn').disabled = currentSlide === 0;
+  document.getElementById('nextBtn').disabled = currentSlide === total - 1;
+  document.getElementById('nextBtn').textContent = currentSlide === total - 1 ? '✓ Fin' : 'Suivant →';
+  document.getElementById('narratorProgressFill').style.width = '0%';
+  // Show cache indicator
+  if (audioCache[currentSlide]) setStatus('✓ Prêt', '#4CAF50');
+  else setStatus('');
+}
+
+function changeSlide(dir) {
+  const next = currentSlide + dir;
+  if (next >= 0 && next < total) { narratorStop(); goTo(next); }
+}
+
+// ── UI helpers ────────────────────────────────────────────
+function setSpeakingUI(speaking) {
+  document.getElementById('speakingIndicator').classList.toggle('hidden', !speaking);
+  document.getElementById('playBtn').classList.toggle('active', speaking);
+  document.getElementById('playBtn').disabled = speaking;
+  document.getElementById('pauseBtn').disabled = !speaking;
+  document.getElementById('stopBtn').disabled = !speaking;
+}
+
+function startProgressBar(duration) {
+  clearInterval(narratorProgressInterval);
+  document.getElementById('narratorProgressFill').style.width = '0%';
+  const start = Date.now();
+  const ms = duration * 1000;
+  narratorProgressInterval = setInterval(() => {
+    const pct = Math.min(100, ((Date.now() - start) / ms) * 100);
+    document.getElementById('narratorProgressFill').style.width = pct + '%';
+    if (pct >= 100) clearInterval(narratorProgressInterval);
+  }, 200);
+}
+
+// ── ElevenLabs TTS ────────────────────────────────────────
+async function fetchElevenLabsAudio(text, apiKey, voiceId) {
+  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: {
+      'xi-api-key': apiKey,
+      'Content-Type': 'application/json',
+      'Accept': 'audio/mpeg'
+    },
+    body: JSON.stringify({
+      text: text,
+      model_id: 'eleven_multilingual_v2',
+      voice_settings: {
+        stability: 0.45,
+        similarity_boost: 0.80,
+        style: 0.35,
+        use_speaker_boost: true
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail?.message || `Erreur ${response.status}`);
+  }
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+// ── Narrator controls ─────────────────────────────────────
+async function narratorPlay() {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    document.getElementById('apiKeyInput').classList.add('error');
+    setStatus('⚠ Clé requise', '#C62828');
+    setTimeout(() => document.getElementById('apiKeyInput').classList.remove('error'), 2000);
+    return;
+  }
+  document.getElementById('apiKeyInput').classList.remove('error');
+
+  // If paused, resume
+  const audio = document.getElementById('narratorAudio');
+  if (isPaused) {
+    audio.play();
+    isPaused = false; isPlaying = true;
+    setSpeakingUI(true);
+    document.getElementById('pauseBtn').textContent = '⏸ Pause';
+    setStatus('▶ Lecture', '#4CAF50');
+    return;
+  }
+
+  narratorStop();
+  const text = stripHtml(narrations[currentSlide].text);
+  const voiceId = getVoiceId();
+  const cacheKey = `${currentSlide}_${voiceId}`;
+
+  setSpeakingUI(true);
+  setStatus('⏳ Génération…', 'rgba(212,160,23,0.8)');
+  document.getElementById('playBtn').disabled = true;
+
+  try {
+    let audioUrl;
+    if (audioCache[cacheKey]) {
+      audioUrl = audioCache[cacheKey];
+      setStatus('✓ Prêt', '#4CAF50');
+    } else {
+      audioUrl = await fetchElevenLabsAudio(text, apiKey, voiceId);
+      audioCache[cacheKey] = audioUrl;
+      document.getElementById('apiKeyInput').classList.add('valid');
+    }
+
+    audio.src = audioUrl;
+    audio.playbackRate = 1.0;
+
+    audio.onloadedmetadata = () => {
+      startProgressBar(audio.duration);
+      setStatus('▶ Lecture', '#4CAF50');
+    };
+
+    audio.onended = () => {
+      isPlaying = false; isPaused = false;
+      setSpeakingUI(false);
+      clearInterval(narratorProgressInterval);
+      document.getElementById('narratorProgressFill').style.width = '100%';
+      document.getElementById('pauseBtn').textContent = '⏸ Pause';
+      setStatus('✓ Terminé', '#4CAF50');
+    };
+
+    audio.onerror = () => {
+      isPlaying = false; isPaused = false;
+      setSpeakingUI(false);
+      setStatus('⚠ Erreur audio', '#C62828');
+    };
+
+    await audio.play();
+    isPlaying = true;
+
+  } catch (err) {
+    isPlaying = false;
+    setSpeakingUI(false);
+    document.getElementById('apiKeyInput').classList.add('error');
+    setStatus('⚠ Erreur API', '#C62828');
+    console.error('ElevenLabs error:', err.message);
+    setTimeout(() => {
+      document.getElementById('apiKeyInput').classList.remove('error');
+      setStatus('Vérifiez la clé', 'rgba(212,160,23,0.6)');
+    }, 3000);
+  }
+}
+
+function narratorPause() {
+  const audio = document.getElementById('narratorAudio');
+  if (isPaused) {
+    audio.play();
+    isPaused = false; isPlaying = true;
+    setSpeakingUI(true);
+    document.getElementById('pauseBtn').textContent = '⏸ Pause';
+    setStatus('▶ Lecture', '#4CAF50');
+  } else if (isPlaying) {
+    audio.pause();
+    isPaused = true; isPlaying = false;
+    setSpeakingUI(false);
+    document.getElementById('pauseBtn').textContent = '▶ Reprendre';
+    document.getElementById('pauseBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = false;
+    setStatus('⏸ En pause', 'rgba(212,160,23,0.7)');
+    clearInterval(narratorProgressInterval);
+  }
+}
+
+function narratorStop() {
+  const audio = document.getElementById('narratorAudio');
+  audio.pause();
+  audio.src = '';
+  isPlaying = false; isPaused = false;
+  setSpeakingUI(false);
+  clearInterval(narratorProgressInterval);
+  document.getElementById('narratorProgressFill').style.width = '0%';
+  document.getElementById('pauseBtn').textContent = '⏸ Pause';
+  setStatus('');
+}
+
+// Pre-cache next slide in background
+async function preCacheNext() {
+  const apiKey = getApiKey();
+  if (!apiKey) return;
+  const next = currentSlide + 1;
+  if (next >= total) return;
+  const voiceId = getVoiceId();
+  const cacheKey = `${next}_${voiceId}`;
+  if (audioCache[cacheKey]) return;
+  try {
+    const text = stripHtml(narrations[next].text);
+    const url = await fetchElevenLabsAudio(text, apiKey, voiceId);
+    audioCache[cacheKey] = url;
+  } catch(e) { /* silent */ }
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') changeSlide(1);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') changeSlide(-1);
+  if (e.key === ' ') { e.preventDefault(); isPlaying ? narratorPause() : narratorPlay(); }
+});
+
+// API key validation feedback
+document.getElementById('apiKeyInput').addEventListener('input', function() {
+  this.classList.remove('valid', 'error');
+  audioCache = {}; // Reset cache when key changes
+  setStatus('');
+});
+
+buildDots();
+goTo(0);
+startTimer();
+</script>
+</body>
+</html>
